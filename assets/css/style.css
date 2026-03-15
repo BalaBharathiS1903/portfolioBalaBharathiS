@@ -425,8 +425,9 @@ html, body {
 /* HERO
 ================================================== */
 .hero {
-  background: url(../img/bala.jpg) center no-repeat;
-  height: 100%;
+  background: url(../img/bala.jpg) center top no-repeat;
+  height: 70vh;
+  min-height: 450px;
   width: 100%;
   display: table;
   position: relative;
@@ -1562,7 +1563,7 @@ html, body {
     content: none;
   }
   .timeline > li .timeline-rectangle {
-    disply: none;
+    display: none;
   }
 }
 
@@ -1936,6 +1937,7 @@ html, body {
   box-shadow: none;
   border-radius: 0;
   -webkit-appearance: none;
+  appearance: none;
 }
 
 .form-control:focus {
