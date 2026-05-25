@@ -1,216 +1,233 @@
-$(function () {    
-// Navigation 
-    $('.site-navigation').affix({
-      offset: {
-        top: $('.hero').height()
-            }
-    });
+$(function () {
+    "use strict";
 
     var $window = $(window);
-    function checkWidth() {
-        var windowsize = $window.width();
-        if (windowsize < 768) {
-            $('.nav a').on('click', function(){
-                $('.navbar-toggle').click() //bootstrap 3.x by Richard
-            });
+    var $document = $(document);
+    var $body = $("body");
+    var $navigation = $(".site-navigation");
+    var $skillsSection = $(".section-skills");
+    var $counterSection = $(".section-counters");
+    var motionSelector = ".main-service, .feature-about, .certificate-item, .progress-group, .counter, .service-info, .timeline > li > .timeline-panel, .portfolio-item, .contact-card-item, .section-me .container, .section-twitter .container";
+    var progressLoaded = false;
+    var countersLoaded = false;
+
+    if ($.fn.affix && $navigation.length && $(".hero").length) {
+        $navigation.affix({
+            offset: {
+                top: $(".hero").outerHeight()
+            }
+        });
+    }
+
+    if ($.fn.scrollspy) {
+        $body.scrollspy({
+            target: ".site-header",
+            offset: 80
+        });
+    }
+
+    function collapseMobileMenu() {
+        if ($window.width() < 768) {
+            $("#portfolio-perfect-collapse").collapse("hide");
         }
     }
-    // Execute on load
-    checkWidth();
-    // Bind event listener
-    $(window).resize(checkWidth);
 
-// Highlight the top nav as scrolling occurs
-    $('body').scrollspy({
-        target: '.site-header',
-        offset: 10
-    });
+    $document.on("click", ".page-scroll a", function (event) {
+        var targetSelector = $(this).attr("href");
 
-//jQuery for page scrolling feature - requires jQuery Easing plugin
-    $(document).on('click', '.page-scroll a', function(event) {
-        var $anchor = $(this);
-        $('html, body').stop().animate({
-            scrollTop: $($anchor.attr('href')).offset().top
-        }, 1000, 'easeInOutExpo');
+        if (!targetSelector || targetSelector.charAt(0) !== "#") {
+            return;
+        }
+
+        var $target = $(targetSelector);
+        if (!$target.length) {
+            return;
+        }
+
         event.preventDefault();
+
+        $("html, body").stop().animate({
+            scrollTop: Math.max($target.offset().top - 50, 0)
+        }, 700);
+
+        collapseMobileMenu();
     });
 
-//Counters 
-    if ($(".counter-start").length>0) {
-        $(".counter-start").each(function() {
-            var stat_item = $(this),
-            offset = stat_item.offset().top;
-            $(window).scroll(function() {
-                if($(window).scrollTop() > (offset - 1000) && !(stat_item.hasClass('counting'))) {
-                    stat_item.addClass('counting');
-                    stat_item.countTo();
+    function animateCounters() {
+        if (countersLoaded || !$counterSection.length) {
+            return;
+        }
+
+        var triggerPoint = $counterSection.offset().top - window.innerHeight + 80;
+        if ($window.scrollTop() < triggerPoint) {
+            return;
+        }
+
+        countersLoaded = true;
+
+        $(".counter-start").each(function () {
+            var $counter = $(this);
+            var endValue = parseInt($counter.data("to"), 10) || 0;
+            var duration = parseInt($counter.data("speed"), 10) || 1500;
+            var startTime = null;
+
+            function step(timestamp) {
+                if (!startTime) {
+                    startTime = timestamp;
+                }
+
+                var progress = Math.min((timestamp - startTime) / duration, 1);
+                var currentValue = Math.floor(progress * endValue);
+                $counter.text(currentValue);
+
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    $counter.text(endValue);
+                }
+            }
+
+            window.requestAnimationFrame(step);
+        });
+    }
+
+    function animateProgressBars() {
+        if (progressLoaded || !$skillsSection.length) {
+            return;
+        }
+
+        var triggerPoint = $skillsSection.offset().top - window.innerHeight + 80;
+        if ($window.scrollTop() < triggerPoint) {
+            return;
+        }
+
+        progressLoaded = true;
+
+        $(".progress .progress-bar").each(function () {
+            var $bar = $(this);
+            var goal = parseFloat($bar.data("transitiongoal")) || 0;
+            var $label = $bar.find("span");
+
+            if (!$label.length) {
+                $label = $("<span></span>");
+                $bar.append($label);
+            }
+
+            $bar.css("width", goal + "%");
+            $bar.attr("aria-valuenow", goal);
+            $label.text(goal + "%");
+        });
+    }
+
+    function handleScrollAnimations() {
+        animateCounters();
+        animateProgressBars();
+    }
+
+    handleScrollAnimations();
+    $window.on("scroll", handleScrollAnimations);
+
+    var motionElements = document.querySelectorAll(motionSelector);
+
+    motionElements.forEach(function (element, index) {
+        element.classList.add("motion-reveal");
+        element.style.transitionDelay = Math.min(index * 0.05, 0.35) + "s";
+    });
+
+    if ("IntersectionObserver" in window) {
+        var revealObserver = new IntersectionObserver(function (entries, observer) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add("is-visible");
+                    observer.unobserve(entry.target);
                 }
             });
+        }, {
+            threshold: 0.15,
+            rootMargin: "0px 0px -40px 0px"
         });
-    };
 
-// Open modal function
-function openModal(imageSrc) {
-    var modal = document.getElementById("imageModal");
-    var modalImg = document.getElementById("modalImg");
-    
-    modal.style.display = "block";
-    modalImg.src = imageSrc;
-}
-
-// Close modal function
-function closeModal() {
-    document.getElementById("imageModal").style.display = "none";
-}
-
-
-// Progress bar 
-    var $section = $('.section-skills');
-    function loadDaBars() {
-        $('.progress .progress-bar').progressbar({
-            transition_delay: 500,
-            display_text: 'center'
+        motionElements.forEach(function (element) {
+            revealObserver.observe(element);
+        });
+    } else {
+        motionElements.forEach(function (element) {
+            element.classList.add("is-visible");
         });
     }
-    
-    $(document).bind('scroll', function(ev) {
-        var scrollOffset = $(document).scrollTop();
-        var containerOffset = $section.offset().top - window.innerHeight;
-        if (scrollOffset > containerOffset) {
-            loadDaBars();
-            // unbind event not to load scrolsl again
-            $(document).unbind('scroll');
+
+    if ($("#services-carousel").length) {
+        $("#services-carousel").carousel({
+            interval: false
+        });
+    }
+
+    $(".portfolio-sorting a").on("click", function (event) {
+        event.preventDefault();
+
+        var $trigger = $(this);
+        var group = $trigger.data("group");
+
+        $(".portfolio-sorting a").removeClass("active");
+        $trigger.addClass("active");
+
+        $("#grid").children("[data-groups]").each(function () {
+            var $item = $(this);
+            var groups = $item.attr("data-groups");
+            var parsedGroups = [];
+
+            try {
+                parsedGroups = JSON.parse(groups);
+            } catch (error) {
+                parsedGroups = [];
+            }
+
+            var shouldShow = group === "all" || parsedGroups.indexOf(group) !== -1;
+            $item.toggle(shouldShow);
+        });
+    });
+
+    var certificateModal = document.getElementById("certificateModal");
+    var certificateModalImg = document.getElementById("certificateModalImg");
+    var certificateClose = document.getElementById("certificateClose");
+
+    function closeCertificateModal() {
+        if (!certificateModal) {
+            return;
+        }
+
+        certificateModal.style.display = "none";
+        certificateModal.setAttribute("aria-hidden", "true");
+        if (certificateModalImg) {
+            certificateModalImg.src = "";
+        }
+    }
+
+    $(".certificate-trigger").on("click", function () {
+        if (!certificateModal || !certificateModalImg) {
+            return;
+        }
+
+        certificateModalImg.src = $(this).data("image");
+        certificateModal.style.display = "block";
+        certificateModal.setAttribute("aria-hidden", "false");
+    });
+
+    if (certificateClose) {
+        certificateClose.addEventListener("click", closeCertificateModal);
+    }
+
+    if (certificateModal) {
+        certificateModal.addEventListener("click", function (event) {
+            if (event.target === certificateModal) {
+                closeCertificateModal();
+            }
+        });
+    }
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeCertificateModal();
         }
     });
-
-//Team Carousel
-    $('#services-carousel').carousel({ interval: false });
-
-    // Carousel touch support
-    if($(".carousel-inner").length) {
-        $(".carousel-inner").swipe({
-            //Generic swipe handler for all directions
-            swipeLeft: function (event, direction, distance, duration, fingerCount) {
-                $(this).parent().carousel('next');
-            },
-            swipeRight: function () {
-                $(this).parent().carousel('prev');
-            },
-            //Default is 75px, set to 0 for demo so any distance triggers swipe
-            threshold: 50
-        });
-    }
-
-
-// Slick.js   
-    $('.review-carousel').slick({
-        nextArrow: '<button class="slick rectangle slick-next"><i class="fa fa-angle-right" aria-hidden="true"></button>',
-        prevArrow: '<button class="slick rectangle slick-prev"><i class="fa fa-angle-left" aria-hidden="true"></button>'
-    });
-
-    $('.clients-carousel').slick({
-        arrows: false,
-        slidesToShow: 5,
-        responsive: [ {
-            breakpoint : 992,
-            settings: {
-                slidesToShow: 2
-            }
-        },
-        {
-            breakpoint : 480,
-            settings: {
-                slidesToShow: 1
-            }
-      }]
-    });
-
-//shuffle.js
-    var shuffleme = (function( $ ) {
-      'use strict';
-          var $grid = $('#grid'), //locate what we want to sort 
-          $filterOptions = $('.portfolio-sorting li'),  //locate the filter categories
-
-      init = function() {
-
-        // None of these need to be executed synchronously
-        setTimeout(function() {
-          listen();
-          setupFilters();
-        }, 100);
-
-        // instantiate the plugin
-        $grid.shuffle({
-          itemSelector: '[class*="col-"]', 
-           group: Shuffle.ALL_ITEMS, 
-        });
-      },
-
-        
-      // Set up button clicks
-      setupFilters = function() {
-        var $btns = $filterOptions.children();
-        $btns.on('click', function(e) {
-          e.preventDefault();
-          var $this = $(this),
-              isActive = $this.hasClass( 'active' ),
-              group = isActive ? 'all' : $this.data('group');
-
-          // Hide current label, show current label in title
-          if ( !isActive ) {
-            $('.portfolio-sorting li a').removeClass('active');
-          }
-
-          $this.toggleClass('active');
-
-          // Filter elements
-          $grid.shuffle( 'shuffle', group );
-        });
-
-        $btns = null;
-      },
-
-      // Re layout shuffle when images load. This is only needed
-      // below 768 pixels because the .picture-item height is auto and therefore
-      // the height of the picture-item is dependent on the image
-      // I recommend using imagesloaded to determine when an image is loaded
-      // but that doesn't support IE7
-      listen = function() {
-        var debouncedLayout = $.throttle( 300, function() {
-          $grid.shuffle('update');
-        });
-
-        // Get all images inside shuffle
-        $grid.find('img').each(function() {
-          var proxyImage;
-
-          // Image already loaded
-          if ( this.complete && this.naturalWidth !== undefined ) {
-            return;
-          }
-
-          // If none of the checks above matched, simulate loading on detached element.
-          proxyImage = new Image();
-          $( proxyImage ).on('load', function() {
-            $(this).off('load');
-            debouncedLayout();
-          });
-
-          proxyImage.src = this.src;
-        });
-
-        // Because this method doesn't seem to be perfect.
-        setTimeout(function() {
-          debouncedLayout();
-        }, 500);
-      };      
-
-      return {
-        init: init
-      };
-    }( jQuery ));
-
-    if($('#grid').length >0 ) { 
-      shuffleme.init(); //filter portfolio
-    };
-}());
+});
